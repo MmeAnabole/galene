@@ -4,6 +4,10 @@
 
     CGO_ENABLED=0 go build -ldflags='-s -w'
 
+    Notice : on windows :
+        set CGO_ENABLED=0
+        go build -ldflags="-s -w"
+
 ## Create a server certificate
 
     mkdir data
