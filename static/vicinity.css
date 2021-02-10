@@ -1,0 +1,49 @@
+
+#vicinitybutton {
+    white-space: nowrap;
+    margin-right: 0.4em;
+    margin-top: .1em;
+    font-size: 1.1em;
+    text-align: left;
+    width: auto;
+}
+.vicinity-container {
+    height: calc(var(--vh, 1vh) * 100 - 56px);
+    position: relative;
+    background: rgba(255, 255, 0, 0.91);
+}
+.user-v {
+    position: absolute;
+    width:100px;
+    height: 100px;
+    border-radius:50px;
+    border-style:solid;
+    border-color:#000;
+    border-width:10px;
+    cursor: grabbing;
+    background-color:#00FFFF;
+    padding:20px;
+    -webkit-user-select: none; /* Safari */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* IE10+/Edge */
+    user-select: none; /* Standard */
+    top:20px;
+    left:0;
+}
+.user-v:hover{
+    border-color:#DDD;
+}
+[draggable=true] {
+    cursor: move;
+}
+@media only screen and (max-device-width: 1024px) {
+
+    .vicinity-container {
+        position: fixed;
+        height: calc(var(--vh, 1vh) * 100 - 56px);
+        top: 56px;
+        right: 0;
+        left: 0;
+        margin-bottom: 60px;
+    }
+}

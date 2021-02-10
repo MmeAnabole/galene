@@ -451,6 +451,8 @@ function setButtonsVisibility() {
     setVisibility('mediaoptions', permissions.present);
     setVisibility('sendform', permissions.present);
     setVisibility('fileform', canFile && permissions.present);
+
+    setVisibility('vicinitybutton', permissions.present);
 }
 
 /**
@@ -1646,7 +1648,7 @@ function resizePeers() {
     }
 }
 
-/** @type{Object<string,string>} */
+/** @type{Object<string,Object>} */
 let users = {};
 
 /**
@@ -1677,7 +1679,9 @@ function addUser(id, name) {
         name = null;
     if(id in users)
         throw new Error('Duplicate user id');
-    users[id] = name;
+    users[id] = {"name":name,"x":0,"y":0};
+
+    console.log(users)
 
     let div = document.getElementById('users');
     let user = document.createElement('div');
@@ -1689,7 +1693,7 @@ function addUser(id, name) {
         let us = div.children;
         for(let i = 0; i < us.length; i++) {
             let child = us[i];
-            let childname = users[child.id.slice('user-'.length)] || null;
+            let childname = users[child.id.slice('user-'.length)].name || null;
             if(!childname || stringCompare(childname, name) > 0) {
                 div.insertBefore(user, child);
                 return;
@@ -1697,6 +1701,9 @@ function addUser(id, name) {
         }
     }
     div.appendChild(user);
+    console.log("new one")
+
+    addUserVicinity(id, name);
 }
 
 /**
@@ -1708,12 +1715,15 @@ function delUser(id, name) {
         name = null;
     if(!(id in users))
         throw new Error('Unknown user id');
-    if(users[id] !== name)
+    if(users[id].name !== name)
         throw new Error('Inconsistent user name');
     delete(users[id]);
     let div = document.getElementById('users');
     let user = document.getElementById('user-' + id);
     div.removeChild(user);
+
+
+    delUserVicinity(id, name);
 }
 
 function resetUsers() {
@@ -1941,6 +1951,7 @@ let lastMessage = {};
  * @param {unknown} message
  */
 function addToChatbox(peerId, dest, nick, time, privileged, kind, message) {
+    console.log("addToChatbox : " + message)
     let userpass = getUserPass();
     let row = document.createElement('div');
     row.classList.add('message-row');
@@ -1976,7 +1987,7 @@ function addToChatbox(peerId, dest, nick, time, privileged, kind, message) {
             if(peerId || nick || dest) {
                 let user = document.createElement('span');
                 user.textContent = dest ?
-                    `${nick||'(anon)'} \u2192 ${users[dest]||'(anon)'}` :
+                    `${nick||'(anon)'} \u2192 ${users[dest].name||'(anon)'}` :
                     (nick || '(anon)');
                 user.classList.add('message-user');
                 header.appendChild(user);

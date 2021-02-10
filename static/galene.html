@@ -6,6 +6,7 @@
     <meta http-equiv="ScreenOrientation" content="autoRotate:disabled">
     <link rel="stylesheet" type="text/css" href="/common.css"/>
     <link rel="stylesheet" type="text/css" href="/galene.css"/>
+    <link rel="stylesheet" type="text/css" href="/vicinity.css"/>
     <link rel="author" href="https://www.irif.fr/~jch/"/>
     <!-- Font Awesome File -->
     <link href="/css/fontawesome.min.css" rel="stylesheet" type="text/css">
@@ -37,6 +38,13 @@
               </div>
 
               <ul class="nav-menu">
+                <!-- add for Vicinity -->
+                <li>
+                  <button id="vicinitybutton" class="invisible btn btn-success">
+                    <i class="fas"></i><span class="nav-text"> Vicinity Mode</span>
+                  </button>
+                </li>
+                <!-- end add for Vicinity -->
                 <li>
                   <button id="presentbutton" class="invisible btn btn-success">
                     <i class="fas fa-play" aria-hidden="true"></i><span class="nav-text"> Ready</span>
@@ -107,6 +115,12 @@
                   <div id="peers"></div>
                 </div>
               </div>
+
+              <div class="vicinity-container invisible" id="vicinity-container">
+
+
+              </div>
+
               <div class="login-container invisible" id="login-container">
                 <div class="login-box">
                   <form id="userform" class="userform">
@@ -263,5 +277,6 @@
     <script src="/protocol.js" defer></script>
     <script src="/scripts/toastify.js" defer></script>
     <script src="/galene.js" defer></script>
+    <script src="/vicinity.js" defer></script>
   </body>
 </html>
