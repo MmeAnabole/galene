@@ -305,10 +305,7 @@ func Add(name string, desc *description) (*Group, error) {
 
 	if desc != nil {
 		g.description = desc
-	} else if time.Since(g.description.loadTime) < 5*time.Second {
-		return g, nil
 	} else if !descriptionChanged(name, g.description) {
-		g.description.loadTime = time.Now()
 		return g, nil
 	}
 
@@ -488,15 +485,12 @@ func AddClient(group string, c Client) (*Group, error) {
 	g.clients[c.Id()] = c
 	g.timestamp = time.Now()
 
-	go func(clients []Client) {
-		u := c.Username()
-		c.PushClient(c.Id(), u, true)
-		for _, cc := range clients {
-			uu := cc.Username()
-			c.PushClient(cc.Id(), uu, true)
-			cc.PushClient(c.Id(), u, true)
-		}
-	}(clients)
+	u := c.Username()
+	c.PushClient(c.Id(), u, true)
+	for _, cc := range clients {
+		c.PushClient(cc.Id(), cc.Username(), true)
+		cc.PushClient(c.Id(), u, true)
+	}
 
 	return g, nil
 }
@@ -684,16 +678,23 @@ func (g *Group) GetChatHistory() []ChatHistoryEntry {
 }
 
 func matchClient(group string, c Challengeable, users []ClientCredentials) (bool, bool) {
+	matched := false
+	for _, u := range users {
+		if u.Username == c.Username() {
+			matched = true
+			if c.Challenge(group, u) {
+				return true, true
+			}
+		}
+	}
+	if matched {
+		return true, false
+	}
+
 	for _, u := range users {
 		if u.Username == "" {
 			if c.Challenge(group, u) {
 				return true, true
-			}
-		} else if u.Username == c.Username() {
-			if c.Challenge(group, u) {
-				return true, true
-			} else {
-				return true, false
 			}
 		}
 	}
@@ -702,7 +703,6 @@ func matchClient(group string, c Challengeable, users []ClientCredentials) (bool
 
 type description struct {
 	fileName       string              `json:"-"`
-	loadTime       time.Time           `json:"-"`
 	modTime        time.Time           `json:"-"`
 	fileSize       int64               `json:"-"`
 	Description    string              `json:"description,omitempty"`
@@ -811,7 +811,6 @@ func GetDescription(name string) (*description, error) {
 	desc.fileName = fileName
 	desc.fileSize = fi.Size()
 	desc.modTime = fi.ModTime()
-	desc.loadTime = time.Now()
 
 	return &desc, nil
 }
