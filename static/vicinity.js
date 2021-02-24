@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+
+
 /** A toggle button to switch between modes. */
 getButtonElement('vicinitybutton').onclick = function(e) {
     e.preventDefault();
@@ -180,5 +182,31 @@ function handleCoord(xPos,yPos,id) {
 /** Vicinity Initialisation */
 function vicinityStart() {
     updateSetting("vicinity", "off")
+
+    // color interface
+    let htmlText    = "";
+    let tabBckgColors = ["#741981","#9e0b7b","#c20a70","#de2361","#f24250","#ff633c","#ff8525","#ffa600"]
+    for(var i=0;i<tabBckgColors.length;i++){
+        htmlText += '<div class="btn-color" id="btn-color'+i+'" ></div>';
+        htmlText += "\n";
+    }
+    document.getElementById('vicinity-listColors').innerHTML = htmlText;
+    for(var i=0;i<tabBckgColors.length;i++){
+        document.getElementById('btn-color'+i).style.backgroundColor=tabBckgColors[i];
+        document.getElementById('btn-color'+i).onclick = function(e) {
+            e.preventDefault()
+            let mycolor = document.getElementById(this.id).style.backgroundColor;
+            document.querySelectorAll('.btn-color').forEach(function(button) {
+                button.style.borderWidth='1px';
+            });
+            document.getElementById(this.id).style.borderWidth='6px';
+            getInputElement('usercolor').value=mycolor;
+        };
+    }
+    document.getElementById('btn-color'+0).style.borderWidth='6px';
+    getInputElement('usercolor').value=tabBckgColors[0];
+
+
+
 }
 vicinityStart();

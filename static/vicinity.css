@@ -1,3 +1,19 @@
+/*
+---------------------
+login
+---------------------
+*/
+.btn-color{
+    width: 40px;
+    height: 40px;
+    margin: 10px;
+    cursor:pointer;
+    display:inline-block;
+    background-color: #8993b8;
+    border: 1px #000000;
+    border-style:solid;
+    border-radius:5px;
+}
 
 #vicinitybutton {
     white-space: nowrap;
@@ -36,6 +52,7 @@
 [draggable=true] {
     cursor: move;
 }
+
 @media only screen and (max-device-width: 1024px) {
 
     .vicinity-container {

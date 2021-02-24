@@ -2616,6 +2616,7 @@ document.getElementById('userform').onsubmit = async function(e) {
     try {
         let username = getInputElement('username').value.trim();
         let password = getInputElement('password').value;
+        //let usercolor = getInputElement('usercolor').value;
         storeUserPass(username, password);
         serverConnect();
     } finally {
