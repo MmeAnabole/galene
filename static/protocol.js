@@ -187,7 +187,7 @@ function ServerConnection() {
   * @property {string} [source]
   * @property {string} [dest]
   * @property {string} [username]
-  * @property {string} [password]
+ * @property {string} [password]
   * @property {boolean} [privileged]
   * @property {Object<string,boolean>} [permissions]
   * @property {string} [group]
@@ -356,7 +356,7 @@ ServerConnection.prototype.join = function(group, username, password) {
         kind: 'join',
         group: group,
         username: username,
-        password: password,
+        password: password
     });
 };
 

@@ -43,9 +43,10 @@ let fallbackUserPass = null;
 /**
  * @param {string} username
  * @param {string} password
+ * @param {string} usercolor
  */
-function storeUserPass(username, password) {
-    let userpass = {username: username, password: password};
+function storeUserData(username, password, usercolor) {
+    let userpass = {username: username, password: password, usercolor:usercolor};
     try {
         window.sessionStorage.setItem('userpass', JSON.stringify(userpass));
         fallbackUserPass = null;
@@ -60,7 +61,7 @@ function storeUserPass(username, password) {
  *
  * @returns {userpass}
  */
-function getUserPass() {
+function getUserData() {
     /** @type{userpass} */
     let userpass;
     try {
@@ -284,11 +285,12 @@ function closeVideoControls() {
 }
 
 function fillLogin() {
-    let userpass = getUserPass();
+    let userpass = getUserData();
     getInputElement('username').value =
         userpass ? userpass.username : '';
     getInputElement('password').value =
         userpass ? userpass.password : '';
+    // @TODO get color
 }
 
 /**
@@ -317,7 +319,7 @@ function setConnected(connected) {
 /** @this {ServerConnection} */
 function gotConnected() {
     setConnected(true);
-    let up = getUserPass();
+    let up = getUserData();
     this.join(group, up.username, up.password);
 }
 
@@ -1688,9 +1690,7 @@ function addUser(id, name) {
         name = null;
     if(id in users)
         throw new Error('Duplicate user id');
-    users[id] = {"name":name,"x":0,"y":0};
-
-    console.log(users)
+    users[id] = {"name":name,"color":"#20b91e","x":0,"y":0};
 
     let div = document.getElementById('users');
     let user = document.createElement('div');
@@ -1710,7 +1710,6 @@ function addUser(id, name) {
         }
     }
     div.appendChild(user);
-    console.log("new one")
 
     addUserVicinity(id, name);
 }
@@ -1760,7 +1759,7 @@ function gotUser(id, kind, name) {
 }
 
 function displayUsername() {
-    let userpass = getUserPass();
+    let userpass = getUserData();
     let text = '';
     if(userpass && userpass.username)
         document.getElementById('userspan').textContent = userpass.username;
@@ -1800,6 +1799,12 @@ async function gotJoined(kind, group, perms, message) {
         return;
     case 'join':
     case 'change':
+        let u = getUserData();
+        // notify color
+        serverConnection.userMessage("setColor", null, u.usercolor, false)
+        // ask other colors
+        serverConnection.userMessage("getColor", null, "", true)
+
         displayUsername();
         setButtonsVisibility();
         if(kind === 'change')
@@ -1879,6 +1884,16 @@ function gotUserMessage(id, dest, username, time, privileged, kind, message) {
         } else {
             console.error(`Got unprivileged message of kind ${kind}`);
         }
+        break;
+     case 'setColor':
+         users[id].color=message;
+         let user = document.getElementById('user-' + id);
+         user.classList.add("color"+message);
+         break;
+
+     case 'getColor':
+        let u = getUserData();
+        serverConnection.userMessage("setColor", id, u.usercolor, true)
         break;
     default:
         console.warn(`Got unknown user message ${kind}`);
@@ -1964,7 +1979,7 @@ let lastMessage = {};
  */
 function addToChatbox(peerId, dest, nick, time, privileged, kind, message) {
     console.log("addToChatbox : " + message)
-    let userpass = getUserPass();
+    let userpass = getUserData();
     let row = document.createElement('div');
     row.classList.add('message-row');
     let container = document.createElement('div');
@@ -2616,8 +2631,8 @@ document.getElementById('userform').onsubmit = async function(e) {
     try {
         let username = getInputElement('username').value.trim();
         let password = getInputElement('password').value;
-        //let usercolor = getInputElement('usercolor').value;
-        storeUserPass(username, password);
+        let usercolor = getInputElement('usercolor').value;
+        storeUserData(username, password, usercolor);
         serverConnect();
     } finally {
         connecting = false;

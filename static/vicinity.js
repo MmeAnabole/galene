@@ -84,7 +84,7 @@ function addUserVicinity(id, name){
 function delUserVicinity(id, name) {
     let div = document.getElementById('vicinity-container');
     let user = document.getElementById('user-v-' + id);
-    div.removeChild(user);
+    //div.removeChild(user);
 }
 
 /**
@@ -185,17 +185,19 @@ function vicinityStart() {
 
     // color interface
     let htmlText    = "";
-    let tabBckgColors = ["#741981","#9e0b7b","#c20a70","#de2361","#f24250","#ff633c","#ff8525","#ffa600"]
-    for(var i=0;i<tabBckgColors.length;i++){
-        htmlText += '<div class="btn-color" id="btn-color'+i+'" ></div>';
+    let tabBckgColors = [];
+    for(let i=0;i<8;i++){
+        tabBckgColors[i]=window.getComputedStyle(document.documentElement).getPropertyValue('--color'+i)
+        htmlText += '<div class="btn-color" id="btn-color'+i+'" myColor="'+i+'"></div>';
         htmlText += "\n";
     }
     document.getElementById('vicinity-listColors').innerHTML = htmlText;
+
     for(var i=0;i<tabBckgColors.length;i++){
         document.getElementById('btn-color'+i).style.backgroundColor=tabBckgColors[i];
         document.getElementById('btn-color'+i).onclick = function(e) {
             e.preventDefault()
-            let mycolor = document.getElementById(this.id).style.backgroundColor;
+            let mycolor = document.getElementById(this.id).getAttribute('mycolor')
             document.querySelectorAll('.btn-color').forEach(function(button) {
                 button.style.borderWidth='1px';
             });
@@ -204,7 +206,7 @@ function vicinityStart() {
         };
     }
     document.getElementById('btn-color'+0).style.borderWidth='6px';
-    getInputElement('usercolor').value=tabBckgColors[0];
+    getInputElement('usercolor').value=0;
 
 
 

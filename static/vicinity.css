@@ -1,5 +1,20 @@
 /*
 ---------------------
+variables
+---------------------
+*/
+:root{
+    --color0: #741981;
+    --color1: #9e0b7b;
+    --color2: #c20a70;
+    --color3: #de2361;
+    --color4: #f24250;
+    --color5: #ff633c;
+    --color6: #ff8525;
+    --color7: #ffa600;
+}
+/*
+---------------------
 login
 ---------------------
 */
@@ -12,7 +27,7 @@ login
     background-color: #8993b8;
     border: 1px #000000;
     border-style:solid;
-    border-radius:5px;
+    border-radius:20px;
 }
 
 #vicinitybutton {
@@ -63,4 +78,29 @@ login
         left: 0;
         margin-bottom: 60px;
     }
+}
+
+.color0::before{
+    color:var(--color0) !important;
+}
+.color1::before{
+     color:var(--color1) !important;
+}
+.color2::before{
+    color:var(--color2) !important;
+}
+.color3::before{
+    color:var(--color3) !important;
+}
+.color4::before{
+    color:var(--color4) !important;
+}
+.color5::before{
+    color:var(--color5) !important;
+}
+.color6::before{
+    color:var(--color6) !important;
+}
+.color7::before{
+    color:var(--color7) !important;
 }
