@@ -39,7 +39,6 @@ let serverConnection;
  */
 let fallbackUserPass = null;
 
-
 /**
  * @param {string} username
  * @param {string} password
@@ -454,8 +453,8 @@ function setButtonsVisibility() {
     setVisibility('mediaoptions', permissions.present);
     setVisibility('sendform', permissions.present);
     setVisibility('fileform', canFile && permissions.present);
-
-    setVisibility('vicinitybutton', permissions.present);
+    setVisibility('vicinitybutton', permissions.op);
+    setVisibility('bullhornbutton', false);
 }
 
 /**
@@ -1329,6 +1328,7 @@ function muteLocalTracks(mute) {
  */
 async function setMedia(c, isUp, mirror, video) {
     let peersdiv = document.getElementById('peers');
+    let nbmedia=0;
 
     let div = document.getElementById('peer-' + c.localId);
     if(!div) {
@@ -1358,6 +1358,14 @@ async function setMedia(c, isUp, mirror, video) {
         /** @ts-ignore */
         media.playsinline = true;
         media.id = 'media-' + c.localId;
+        if(c.source===null) {
+            nbmedia=users[serverConnection.id].media.length;
+            users[serverConnection.id].media.push({"id":'media-' + c.localId,"cid":c.id,"x":v_params.ori_x,"y":v_params.ori_y+(nbmedia+1)*v_params.offset_y});
+        }else{
+            nbmedia=users[c.source].media.length;
+            users[c.source].media.push({"id":'media-' + c.localId,"cid":c.id,"x":v_params.ori_x,"y":v_params.ori_y+(nbmedia+1)*v_params.offset_y});
+         }
+
         div.appendChild(media);
         if(!video)
             addCustomControls(media, div, c);
@@ -1564,8 +1572,23 @@ function delMedia(localId) {
     let media = /** @type{HTMLVideoElement} */
         (document.getElementById('media-' + localId));
 
+    mediadiv.removeChild(peer); // @TODO understand why it is a problem
     media.srcObject = null;
-    mediadiv.removeChild(peer);
+
+    //-- users
+    for(var key in users) {
+        let founded = -1;
+        for(var i=0;i<users[key].media.length; i++){
+            if(users[key].media[i].id==='media-' + localId) {
+                founded = i;
+            }else{
+            }
+        }
+        if (founded>-1) {
+            users[key].media.splice(founded, 1);
+        }else{
+        }
+    }
 
     setButtonsVisibility();
     resizePeers();
@@ -1690,13 +1713,16 @@ function addUser(id, name) {
         name = null;
     if(id in users)
         throw new Error('Duplicate user id');
-    users[id] = {"name":name,"color":"#20b91e","x":0,"y":0};
+    users[id] = {"name":name,"color":"#20b91e","x":v_params.ori_x,"y":v_params.ori_y, "media":[],"bullhorn":false};
 
     let div = document.getElementById('users');
     let user = document.createElement('div');
     user.id = 'user-' + id;
     user.classList.add("user-p");
     user.textContent = name ? name : '(anon)';
+
+    // put it before since problem with return - warning : structured programming not respected with return
+    addUserVicinity(id, name);
 
     if(name) {
         let us = div.children;
@@ -1711,7 +1737,7 @@ function addUser(id, name) {
     }
     div.appendChild(user);
 
-    addUserVicinity(id, name);
+
 }
 
 /**
@@ -1729,7 +1755,6 @@ function delUser(id, name) {
     let div = document.getElementById('users');
     let user = document.getElementById('user-' + id);
     div.removeChild(user);
-
 
     delUserVicinity(id, name);
 }
@@ -1800,10 +1825,11 @@ async function gotJoined(kind, group, perms, message) {
     case 'join':
     case 'change':
         let u = getUserData();
+        let data = {c:u.usercolor, x:users[serverConnection.id].x, y:users[serverConnection.id].y, bullhorn:users[serverConnection.id].bullhorn};
         // notify color
-        serverConnection.userMessage("setColor", null, u.usercolor, false)
+        serverConnection.userMessage("setAllData", null, data, false)
         // ask other colors
-        serverConnection.userMessage("getColor", null, "", true)
+        serverConnection.userMessage("getAllData", null, "", true)
 
         displayUsername();
         setButtonsVisibility();
@@ -1856,9 +1882,12 @@ async function gotJoined(kind, group, perms, message) {
  * @param {number} time
  * @param {boolean} privileged
  * @param {string} kind
- * @param {unknown} message
+ * @param {any} message
  */
 function gotUserMessage(id, dest, username, time, privileged, kind, message) {
+
+    let userv = document.getElementById('user-v-' + id);
+
     switch(kind) {
     case 'error':
     case 'warning':
@@ -1885,16 +1914,115 @@ function gotUserMessage(id, dest, username, time, privileged, kind, message) {
             console.error(`Got unprivileged message of kind ${kind}`);
         }
         break;
-     case 'setColor':
-         users[id].color=message;
+     case 'setAllData':
+         users[id].color=message.c;
          let user = document.getElementById('user-' + id);
-         user.classList.add("color"+message);
-         break;
+         user.classList.add("color"+message.c);
+         let circlev = document.getElementById('circle-v-' + id);
+         circlev.style.backgroundColor='var(--color'+message.c+')';
+         //let userv = document.getElementById('user-v-' + id);
 
-     case 'getColor':
-        let u = getUserData();
-        serverConnection.userMessage("setColor", id, u.usercolor, true)
+         let xdef=parseInt(message.x);
+         let ydef=parseInt(message.y);
+
+         if(id===serverConnection.id) {
+             userv.dataset.currentx=message.x;
+             userv.dataset.currenty=message.y;
+             userv.dataset.initialx=message.x;
+             userv.dataset.initialy=message.y;
+          }else{
+             if (message.x<v_params.hall_x) {
+                 xdef=v_params.out_x;
+              }else{
+             }
+         }
+         userv.style.left=xdef+"px";
+         userv.style.top=ydef+"px";
+         users[id].x=xdef;
+         users[id].y=ydef;
+
+
+      break;
+
+      case 'getAllData':
+         let u = getUserData();
+         let data = {c:u.usercolor, x:users[serverConnection.id].x, y:users[serverConnection.id].y,bullhorn:users[serverConnection.id].bullhorn};
+         serverConnection.userMessage("setAllData", id, data , true)
         break;
+
+
+      case 'setPos':
+
+          //let userp = document.getElementById('user-v-' + id);
+          let xdefp=parseInt(message.x);
+          let  ydefp=parseInt(message.y);
+
+            if(id===serverConnection.id) {
+                // impossible
+            }else{
+                if (message.x<v_params.hall_x) {
+                    xdefp=v_params.out_x;
+                }else{
+                }
+
+            }
+            userv.style.left=xdefp+"px";
+            userv.style.top=ydefp+"px";
+            users[id].x=xdefp;
+            users[id].y=ydefp;
+
+            // volume
+            computeVolume();
+
+            break;
+
+        case 'setPosMedia':
+            //-- search media ---
+            let userData = getUserFromStream(message.cid);
+
+            let xdefm=parseInt(message.x);
+            let ydefm=parseInt(message.y);
+            if(id===serverConnection.id) {
+                // impossible
+            }else{
+                if (message.x<v_params.hall_x) {
+                    xdefm=v_params.out_x;
+                }else{
+                }
+            }
+            users[userData.userid].media[userData.index].x=xdefm;
+            users[userData.userid].media[userData.index].y=ydefm;
+            let peerid = "peer-"+users[userData.userid].media[userData.index].id.substr(6,2);
+
+            let divm=document.getElementById(peerid);
+            divm.style.left=xdefm+"px";
+            divm.style.top=ydefm+"px";
+            divm.dataset.currentx=xdefm;
+            divm.dataset.currenty=ydefm;
+
+            computeEye();
+
+            break;
+        case 'setVicinity':
+            setVicinity(message);
+            break;
+
+        case 'setBullhorn':
+            users[id].bullhorn=message;
+            //let div = document.getElementById('user-v-'+id);
+            //let circle = div.children[0];
+            let circle = userv.children[0];
+            let icon = circle.children[0];
+            if(message===true) {
+                icon.classList.add("fa-bullhorn");
+            }else{
+                icon.classList.remove("fa-bullhorn");
+            }
+            // volume
+            computeVolume();
+            computeEye();
+
+            break;
     default:
         console.warn(`Got unknown user message ${kind}`);
         break;
@@ -1978,7 +2106,6 @@ let lastMessage = {};
  * @param {unknown} message
  */
 function addToChatbox(peerId, dest, nick, time, privileged, kind, message) {
-    console.log("addToChatbox : " + message)
     let userpass = getUserData();
     let row = document.createElement('div');
     row.classList.add('message-row');
