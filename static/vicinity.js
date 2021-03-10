@@ -24,7 +24,7 @@ let v_params;
 /** A toggle button to switch between modes. */
 getButtonElement('vicinitybutton').onclick = function(e) {
     e.preventDefault();
-    // get current vicinity mode ----------
+    // @TODO remove the control : get current vicinity mode ----------
     let currentSettings = getSettings();
     let currentVicinity = "off";
     if (typeof(currentSettings.vicinity)==='undefined') {
@@ -61,74 +61,16 @@ function setVicinity(state){
         setVisibility('bullhornbutton', true);
 
         // media
-        let newParent = document.getElementById('list-media-v');
-        let oldParent = document.getElementById('peers');
-        while (oldParent.childNodes.length > 0) {
-            let theMedia = oldParent.childNodes[0];
-            let indexid = theMedia.id.substr(5,2);
-                // @TODO avoid DOM dataset
-            let userData = getUserFromMedia("media-"+indexid);
-            theMedia.dataset.userid = userData.userid;
-            theMedia.dataset.index = userData.index;
-            //-- eye -------------
-            div = document.createElement('div');
-            div.id = 'eye-' + theMedia.id;
-            div.classList.add('v-eye');
-            div.classList.add('fas');
-            div.classList.add('fa-eye');
-            div.onclick = function(e) {
-                e.preventDefault();
-                let indexid = e.target.id.substr(9,2);
-                let div = document.getElementById('peer-'+indexid);
-                div.style.left='unset';
-                div.style.top='unset';
-                div.classList.remove('v-peer');
-                div.classList.add('front-over');
-
-                div = document.getElementById('grey-backgrd');
-                div.style.display="block";
-                div = document.getElementById('eye-peer-'+indexid);
-                div.style.display="none";
-
-            };
-            //-- style and position --------------
-            theMedia.classList.add('v-peer');
-            if(userData.userid==="") {
-                //impossible ?
-                theMedia.style.left=v_params.out_x+"px";
-            }else{
-                let xdef=users[userData.userid].media[userData.index].x;
-                let ydef=users[userData.userid].media[userData.index].y;
-                if(userData.userid===serverConnection.id) {
-                    theMedia.addEventListener("touchstart", dragStart, false);
-                    theMedia.addEventListener("touchend", dragEnd, false);
-                    theMedia.addEventListener("touchmove", drag, false);
-                    theMedia.addEventListener("mousedown", dragStart, false);
-                    theMedia.addEventListener("mouseup", dragEnd, false);
-                    theMedia.addEventListener("mousemove", drag, false);
-                }else{
-                    if (xdef<v_params.hall_x) {
-                        xdef=v_params.out_x;
-                    }else{
-                    }
-                }
-                theMedia.dataset.currentx=xdef;
-                theMedia.dataset.currenty=ydef;
-                theMedia.style.left=xdef+"px";
-                theMedia.style.top=ydef+"px";
-            }
-
-            //-- DOM --------------
-            oldParent.childNodes[0].appendChild(div);
-            newParent.appendChild(oldParent.childNodes[0]);
-        }
+        mediaVicinity();
         computeEye();
         computeVolume();
     }else{
         setVisibility("video-container", true);
+        let video_container = document.getElementById('video-container');
+        video_container.classList.remove('no-video');
         setVisibility("vicinity-container", false);
         setVisibility('bullhornbutton', false);
-        // @TODO reste volume to slider value
+        // @TODO reset volume to slider value
 
          var oldParent = document.getElementById('list-media-v');
          var newParent = document.getElementById('peers');
@@ -147,6 +89,76 @@ function setVicinity(state){
 
     }
     updateSetting("vicinity", state);
+}
+/** replace media */
+function mediaVicinity(){
+    let newParent = document.getElementById('list-media-v');
+    let oldParent = document.getElementById('peers');
+    while (oldParent.childNodes.length > 0) {
+        let theMedia = oldParent.childNodes[0];
+        let indexid = theMedia.id.substr(5,2);
+        // @TODO avoid DOM dataset for currentx, currenty, initialx and initialy. Keep dataset only for userid, type (user or media) and index
+        let userData = getUserFromMedia("media-"+indexid);
+        theMedia.dataset.userid = userData.userid;
+        theMedia.dataset.index = userData.index;
+        //-- eye -------------
+        div = document.createElement('div');
+        div.id = 'eye-' + theMedia.id;
+        div.classList.add('v-eye');
+        div.classList.add('fas');
+        div.classList.add('fa-eye');
+        div.onclick = function(e) {
+            e.preventDefault();
+            let indexid = e.target.id.substr(9,2);
+            let div = document.getElementById('peer-'+indexid);
+            div.style.left='unset';
+            div.style.top='unset';
+            div.classList.remove('v-peer');
+            div.classList.add('front-over');
+
+            div = document.getElementById('grey-backgrd');
+            div.style.display="block";
+            div = document.getElementById('eye-peer-'+indexid);
+            div.style.display="none";
+
+        };
+        //-- style and position --------------
+        theMedia.classList.add('v-peer');
+        if(userData.userid==="") {
+            //impossible ?
+            theMedia.style.left=v_params.out_x+"px";
+        }else{
+            let xdef=users[userData.userid].media[userData.index].x;
+            let ydef=users[userData.userid].media[userData.index].y;
+            if(userData.userid===serverConnection.id) {
+                theMedia.addEventListener("touchstart", dragStart, false);
+                theMedia.addEventListener("touchend", dragEnd, false);
+                theMedia.addEventListener("touchmove", drag, false);
+                theMedia.addEventListener("mousedown", dragStart, false);
+                theMedia.addEventListener("mouseup", dragEnd, false);
+                theMedia.addEventListener("mousemove", drag, false);
+
+                if(users[serverConnection.id].x<=v_params.hall_x) {
+                    theMedia.style.display="none";
+                }else{
+                    theMedia.style.display="block";
+                }
+            }else{
+                if (xdef<v_params.hall_x) {
+                    xdef=v_params.out_x;
+                }else{
+                }
+            }
+            theMedia.dataset.currentx=xdef;
+            theMedia.dataset.currenty=ydef;
+            theMedia.style.left=xdef+"px";
+            theMedia.style.top=ydef+"px";
+        }
+
+        //-- DOM --------------
+        oldParent.childNodes[0].appendChild(div);
+        newParent.appendChild(oldParent.childNodes[0]);
+    }
 }
 /**
  * @param {string} id
@@ -331,16 +343,30 @@ function dragEnd(e) {
             target.dataset.active = "false";
 
             let newPos=computePosition(target.dataset.currentx, target.dataset.currenty);
-            let data = {x:newPos.x-25, y:newPos.y-0}
+            let data = {x:newPos.x-v_params.offset_dragendx, y:newPos.y-v_params.offset_dragendy}
 
             if (data.x<v_params.hall_x) {
                 data.x=v_params.ori_x;
                 if(target.classList[0]==="user-v") {
                     data.y=v_params.ori_y;
+
+                    for(var i=0;i<users[serverConnection.id].media.length;i++){
+                        let peerid = "peer-"+users[serverConnection.id].media[i].id.substr(6,2);
+                        let div = document.getElementById(peerid);
+                        div.style.display="none";
+                    }
                 }else{
                     data.y=v_params.ori_y+(parseInt(target.dataset.index)+1)*v_params.offset_y;
                 }
             }else{
+                if(target.classList[0]==="user-v") {
+                    for(var i=0;i<users[serverConnection.id].media.length;i++){
+                        let peerid = "peer-"+users[serverConnection.id].media[i].id.substr(6,2);
+                        let div = document.getElementById(peerid);
+                        div.style.display="block";
+                    }
+                }else{
+                }
             }
             target.dataset.currentx=data.x;
             target.dataset.currenty=data.y;
@@ -532,13 +558,15 @@ function vicinityStart() {
     let linear_b = 1.0 - 55.0*linear_a;
 
     v_params={
-        ori_x:-65,
+        ori_x:10,
         ori_y:85,
-        hall_x:0,
+        hall_x:60,
         out_x:-3000,
         linear_a:linear_a,
         linear_b:linear_b,
-        offset_y:100,
+        offset_y:110,
+        offset_dragendx:-5,
+        offset_dragendy:25,
         distance_m:110
     };
     // color interface

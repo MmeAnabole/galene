@@ -52,7 +52,7 @@ login
     user-select: none; /* Standard */
     top:20px;
     left:0;
-    width:200px;
+    width:50px;
     cursor:grab;
 }
 .user-v .circle{
@@ -184,7 +184,7 @@ login
 }
 .v-peer{
     z-index: 1;
-    width: 200px;
+    width: 50px;
     height:60px;
     position: absolute;
     top: 220px;
@@ -211,13 +211,17 @@ login
     color:#000;
     font-size: 0.8em;
     pointer-events:none;
+    bottom:unset;
+    top:40px;
+    line-height:0.8em;
 }
 .v-eye{
     position:absolute;
-    top:-6px;
-    left:45%;
+    top:-10px;
+    left:30%;
     cursor:pointer;
     z-index:3;
+    font-size:1.2em;
 }
 #grey-backgrd{
     background-color:rgba(0,0,0,0.8);

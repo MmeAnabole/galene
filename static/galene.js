@@ -1401,6 +1401,18 @@ async function setMedia(c, isUp, mirror, video) {
         } catch(e) {
         }
     }
+    //-- vicinity :
+    let currentSettings = getSettings();
+    let currentVicinity = "off";
+    if (typeof(currentSettings.vicinity)==='undefined') {
+        // "off"
+    }else{
+        currentVicinity = currentSettings.vicinity;
+    }
+    if(currentVicinity==="on") {
+        mediaVicinity();
+    }else{
+    }
 }
 
 /**
@@ -1569,11 +1581,26 @@ function delMedia(localId) {
     if(!peer)
         throw new Error('Removing unknown media');
 
+    //-- vicinity :
+    let currentSettings = getSettings();
+    let currentVicinity = "off";
+    if (typeof(currentSettings.vicinity)==='undefined') {
+        // "off"
+    }else{
+        currentVicinity = currentSettings.vicinity;
+    }
+
+
     let media = /** @type{HTMLVideoElement} */
         (document.getElementById('media-' + localId));
 
-    mediadiv.removeChild(peer); // @TODO understand why it is a problem
     media.srcObject = null;
+    if(currentVicinity==="on") {
+        var mediaParent = document.getElementById('list-media-v');
+        mediaParent.removeChild(peer);
+    }else{
+        mediadiv.removeChild(peer);
+    }
 
     //-- users
     for(var key in users) {
