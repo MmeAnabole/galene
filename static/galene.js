@@ -454,7 +454,14 @@ function setButtonsVisibility() {
     setVisibility('sendform', permissions.present);
     setVisibility('fileform', canFile && permissions.present);
     setVisibility('vicinitybutton', permissions.op);
-    setVisibility('bullhornbutton', false);
+
+    let currentVicinity = getSettings().vicinity;
+    if(currentVicinity=="off") {
+        setVisibility('bullhornbutton', false);
+    }else{
+        setVisibility('bullhornbutton', true);
+    }
+
 }
 
 /**
@@ -1327,6 +1334,8 @@ function muteLocalTracks(mute) {
  *       controls will be created.
  */
 async function setMedia(c, isUp, mirror, video) {
+
+
     let peersdiv = document.getElementById('peers');
     let nbmedia=0;
 
@@ -1358,12 +1367,17 @@ async function setMedia(c, isUp, mirror, video) {
         /** @ts-ignore */
         media.playsinline = true;
         media.id = 'media-' + c.localId;
+
+        let types=[];
+        for (var key in c.labels) {
+            types.push(c.labels[key])
+        }
         if(c.source===null) {
             nbmedia=users[serverConnection.id].media.length;
-            users[serverConnection.id].media.push({"id":'media-' + c.localId,"cid":c.id,"x":v_params.ori_x,"y":v_params.ori_y+(nbmedia+1)*v_params.offset_y});
+            users[serverConnection.id].media.push({"id":'media-' + c.localId,"cid":c.id,"x":v_params.ori_x,"y":v_params.ori_y+(nbmedia+1)*v_params.offset_y,"expanded":0, "types":types});
         }else{
             nbmedia=users[c.source].media.length;
-            users[c.source].media.push({"id":'media-' + c.localId,"cid":c.id,"x":v_params.ori_x,"y":v_params.ori_y+(nbmedia+1)*v_params.offset_y});
+            users[c.source].media.push({"id":'media-' + c.localId,"cid":c.id,"x":v_params.ori_x,"y":v_params.ori_y+(nbmedia+1)*v_params.offset_y,"expanded":0, "types":types});
          }
 
         div.appendChild(media);
@@ -1403,12 +1417,7 @@ async function setMedia(c, isUp, mirror, video) {
     }
     //-- vicinity :
     let currentSettings = getSettings();
-    let currentVicinity = "off";
-    if (typeof(currentSettings.vicinity)==='undefined') {
-        // "off"
-    }else{
-        currentVicinity = currentSettings.vicinity;
-    }
+    let currentVicinity = currentSettings.vicinity;
     if(currentVicinity==="on") {
         mediaVicinity();
     }else{
@@ -1583,13 +1592,7 @@ function delMedia(localId) {
 
     //-- vicinity :
     let currentSettings = getSettings();
-    let currentVicinity = "off";
-    if (typeof(currentSettings.vicinity)==='undefined') {
-        // "off"
-    }else{
-        currentVicinity = currentSettings.vicinity;
-    }
-
+    let currentVicinity = currentSettings.vicinity;
 
     let media = /** @type{HTMLVideoElement} */
         (document.getElementById('media-' + localId));
@@ -1740,7 +1743,8 @@ function addUser(id, name) {
         name = null;
     if(id in users)
         throw new Error('Duplicate user id');
-    users[id] = {"name":name,"color":"#20b91e","x":v_params.ori_x,"y":v_params.ori_y, "media":[],"bullhorn":false};
+    // @TODO give the explaination of all the params
+    users[id] = {"name":name,"color":"#20b91e","x":v_params.ori_x,"y":v_params.ori_y, "media":[],"bullhorn":false,"localx":0,"localy":0,"expanded":0};
 
     let div = document.getElementById('users');
     let user = document.createElement('div');
@@ -2002,8 +2006,47 @@ function gotUserMessage(id, dest, username, time, privileged, kind, message) {
             computeVolume();
 
             break;
-
-        case 'setPosMedia':
+            //@TODO all gainMathod are to be deleted after tests
+        case 'gainMethod1':
+            v_params.type_gain="linear";
+            computeVolume();
+            break
+        case 'gainMethod2':
+            v_params.type_gain="1/d^2";
+            v_params.gain_a = -0.9;
+            computeVolume();
+            break
+        case 'gainMethod3':
+            v_params.type_gain="1/d^2";
+            v_params.gain_a = 30;
+            computeVolume();
+            break
+        case 'gainMethod4':
+            v_params.type_gain="1/d^2";
+            v_params.gain_a = 50;
+            computeVolume();
+            break
+        case 'gainMethod5':
+            v_params.type_gain="1/d^2";
+            v_params.gain_a = 100;
+            computeVolume();
+            break
+        case 'gainMethod6':
+            v_params.type_gain="quadratic";
+            v_params.gain_a = 0;
+            computeVolume();
+            break
+        case 'gainMethod7':
+            v_params.type_gain="quadratic";
+            v_params.gain_a = 4;
+            computeVolume();
+            break
+        case 'gainMethod8':
+            v_params.type_gain="quadratic";
+            v_params.gain_a = 5;
+            computeVolume();
+            break
+        /*case 'setPosMedia':
             //-- search media ---
             let userData = getUserFromStream(message.cid);
 
@@ -2029,7 +2072,7 @@ function gotUserMessage(id, dest, username, time, privileged, kind, message) {
 
             computeEye();
 
-            break;
+            break;*/
         case 'setVicinity':
             setVicinity(message);
             break;
