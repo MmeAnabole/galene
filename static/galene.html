@@ -40,6 +40,11 @@
               <ul class="nav-menu">
                 <!-- add for Vicinity -->
                 <li>
+                  <button id="standardbutton" class="invisible btn btn-success">
+                    <i class="fas"></i><span class="nav-text"> Standard Mode</span>
+                  </button>
+                </li>
+                <li>
                   <button id="vicinitybutton" class="invisible btn btn-success">
                     <i class="fas"></i><span class="nav-text"> Vicinity Mode</span>
                   </button>
@@ -146,8 +151,21 @@
                 <div id="list-users-v"></div>
                 <div id="list-media-v"></div>
                 <div id="list-buttons-v"></div>
-                <div id="grey-backgrd"><a class="closebtn" id="closemediav"><i class="fas fa-times" aria-hidden="true"></i></a></div>
+                <div id="grey-backgrd">
+                  <div class="v-reply">
+                    <div id="v-dest"></div>
+                    <form id="v-inputform">
 
+                      <textarea id="v-input" class="form-reply"></textarea>
+                      <input id="v-inputbutton" type="submit" value="&#10148;" class="btn btn-default"/>
+                    </form>
+                  </div>
+                </div>
+                <div id="grey-cartoon">
+                  <div class="v-alert">
+                    Sorry :<br />you are too far !
+                  </div>
+                </div>
               </div>
 
               <div class="login-container invisible" id="login-container">
@@ -312,6 +330,6 @@
     <script src="/protocol.js" defer></script>
     <script src="/scripts/toastify.js" defer></script>
     <script src="/galene.js" defer></script>
-    <script src="/vicinity.js" defer></script>
+    <script src="/vicinity.js?v=2" defer></script>
   </body>
 </html>

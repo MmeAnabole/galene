@@ -18,68 +18,103 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// @TODO describe objetcts
 /** @type {object} */
 let v_params;
+/** @type {object} */
+let v_DOMevts; // targetid, type, userid,
 
-/** A toggle button to switch between modes. */
+/** to go to vicinity mode */
 getButtonElement('vicinitybutton').onclick = function(e) {
     e.preventDefault();
-    let currentSettings = getSettings();
-    let currentVicinity = currentSettings.vicinity;
-    // toggle -----------------------------
-    if (currentVicinity==="off") {
-        currentVicinity="on";
-        getButtonElement('vicinitybutton').innerHTML="Standard Mode";
-     }else{
-        currentVicinity="off";
-        getButtonElement('vicinitybutton').innerHTML="Vicinity Mode";
-     }
+    let currentVicinity="on";
     setVicinity(currentVicinity);
     serverConnection.userMessage("setVicinity", null, currentVicinity, false);
-
 };
-
+getButtonElement('standardbutton').onclick = function(e) {
+    e.preventDefault();
+    let currentVicinity="off";
+    setVicinity(currentVicinity);
+    serverConnection.userMessage("setVicinity", null, currentVicinity, false);
+};
 
 /**
  * @param {string} state
  */
 function setVicinity(state){
-    //-- chat off -------------------------
-    let left = document.getElementById("left");
-    left.style.display = "none";
-    document.getElementById('collapse-video').style.display = "block";
+    let currentVicinity = getSettings().vicinity;
 
-    if(state==="on") {
-        setVisibility("video-container", false);
-        setVisibility("vicinity-container", true);
-        setVisibility('bullhornbutton', true);
-
-        // media
-        mediaVicinity();
-        computeEye();
-        computeVolume();
+    if(state===currentVicinity) {
+        // already in state
     }else{
-        setVisibility("video-container", true);
-        let video_container = document.getElementById('video-container');
-        video_container.classList.remove('no-video');
-        setVisibility("vicinity-container", false);
-        setVisibility('bullhornbutton', false);
-        // @TODO reset volume to slider value
+        if(state==="on") {
+            setVisibility("video-container", false);
+            setVisibility("vicinity-container", true);
+            setVisibility('bullhornbutton', true);
 
-         var oldParent = document.getElementById('list-media-v');
-         var newParent = document.getElementById('peers');
+            // media
+            mediaVicinity();
+            computeEye();
+            computeVolume();
+        }else{
+            setVisibility("video-container", true);
+            let video_container = document.getElementById('video-container');
+            video_container.classList.remove('no-video');
+            setVisibility("vicinity-container", false);
+            setVisibility('bullhornbutton', false);
+            // @TODO reset volume to slider value
 
-         while (oldParent.childNodes.length > 0) {
-             let theMedia = oldParent.childNodes[0];
-             // @TODO removeEvent
-             theMedia.classList.remove('v-peer');
-             theMedia.style.left='unset';
-             theMedia.style.top='unset';
-             newParent.appendChild(oldParent.childNodes[0]);
-         }
+            // media
+            var oldParent = document.getElementById('list-media-v');
+            var newParent = document.getElementById('peers');
+            while (oldParent.childNodes.length > 0) {
+                let theMedia = oldParent.childNodes[0];
+                // @TODO removeEvent
+                theMedia.classList.remove('v-peer');
+                theMedia.classList.remove('v-peer-expand');
 
+                let userid = theMedia.dataset.userid;
+                let mediaIndex = parseInt(theMedia.dataset.index);
+                users[userid].media[mediaIndex].expanded=0;
+                computePositionMedia(userid,mediaIndex);
+
+                theMedia.style.left='unset';
+                theMedia.style.top='unset';
+                theMedia.style.display='block';
+
+                let media = document.getElementById(users[userid].media[mediaIndex].id);
+                media.volume=1;
+
+                newParent.appendChild(oldParent.childNodes[0]);
+            }
+
+            //-- user expanded ? @Todo create a function
+            for(var key in users) {
+                if (users[key].expanded==1) {
+                    users[key].expanded=0;
+                    let div=document.getElementById('user-v-'+key);
+                    div.classList.remove("userv-expanded");
+                    let btn = document.getElementById('btn-zone-v-' + key);
+                    let btnmsg = document.getElementById('btn-msg-v-' + key);
+                    btn.style.display="none";
+                    btnmsg.style.display="none";
+                }else{
+                }
+               // close button
+                for(var i=0;i<users[key].media.length;i++){
+                    let peerid = "peer-"+users[key].media[i].id.substr(6,2);
+                    let closepeer = document.getElementById("close-"+peerid);
+                    closepeer.style.display="none";
+                    let resizepeer = document.getElementById("resize-"+peerid);
+                    resizepeer.style.display="none";
+                }
+            }
+
+        }
+        updateSetting("vicinity", state);
     }
-    updateSetting("vicinity", state);
+
+
 }
 /** replace media */
 function mediaVicinity(){
@@ -88,18 +123,14 @@ function mediaVicinity(){
     while (oldParent.childNodes.length > 0) {
         let theMedia = oldParent.childNodes[0];
         let indexid = theMedia.id.substr(5,2);
-        // @TODO avoid DOM dataset for currentx, currenty, initialx and initialy. Keep dataset only for userid, type (user or media) and index
+        // Keep dataset only for userid and index
         let userData = getUserFromMedia("media-"+indexid);
         theMedia.dataset.userid = userData.userid;
         theMedia.dataset.index = userData.index;
 
         //-- drag and drop ----------------------
         theMedia.addEventListener("touchstart", dragStart, false);
-        theMedia.addEventListener("touchend", dragEnd, false);
-        theMedia.addEventListener("touchmove", drag, false);
         theMedia.addEventListener("mousedown", dragStart, false);
-        theMedia.addEventListener("mouseup", dragEnd, false);
-        theMedia.addEventListener("mousemove", drag, false);
 
         //-- close ----------------------
         div = document.createElement('div');
@@ -114,10 +145,15 @@ function mediaVicinity(){
             let div = document.getElementById('peer-'+indexid);
             div.classList.remove('v-peer-expand');
             div.classList.add('v-peer');
+            div.style.width="50px";
+            div.style.height="60px";
 
             users[div.dataset.userid].media[parseInt(div.dataset.index)].expanded=0;
+            users[div.dataset.userid].media[parseInt(div.dataset.index)].width=240;
+            users[div.dataset.userid].media[parseInt(div.dataset.index)].height=180;
 
             e.target.style.display="none";
+
             if(users[div.dataset.userid].expanded==0) {
                 div.style.display="none";
             }else{
@@ -125,7 +161,25 @@ function mediaVicinity(){
                 computePositionMedia(div.dataset.userid,parseInt(div.dataset.index));
             }
 
+            div = document.getElementById('resize-peer-'+indexid);
+            div.style.display="none";
+
+            div = document.getElementById('media-'+indexid);
+            div.style.width="40px";
+            div.style.height="40px";
         };
+        //-- DOM --------------
+        theMedia.appendChild(div); // close
+
+        //-- resize ----------------------
+        div = document.createElement('div');
+        div.id = 'resize-' + theMedia.id;
+        div.classList.add('v-resize');
+        div.style.display="none";
+        div.addEventListener("touchstart", dragStart, false);
+        div.addEventListener("mousedown", dragStart, false);
+        //-- DOM --------------
+        theMedia.appendChild(div); //
 
         //-- style and position --------------
         theMedia.classList.add('v-peer');
@@ -142,16 +196,18 @@ function mediaVicinity(){
                 }else{
                 }
             }
-            theMedia.dataset.currentx=xdef;
-            theMedia.dataset.currenty=ydef;
+
+            users[userData.userid].media[userData.index].currentx=xdef;
+            users[userData.userid].media[userData.index].currenty=ydef;
             theMedia.style.left=xdef+"px";
             theMedia.style.top=ydef+"px";
 
             theMedia.style.display="none";
         }
+        users[userData.userid].media[userData.index].width=240;
+        users[userData.userid].media[userData.index].height=180;
 
-        //-- DOM --------------
-        oldParent.childNodes[0].appendChild(div); // close
+
         newParent.appendChild(oldParent.childNodes[0]);
     }
 }
@@ -210,7 +266,7 @@ function addUserVicinity(id, name){
     user.id = 'user-v-' + id;
     user.classList.add("user-v");
     let currentName= name ? name : '(anon)';
-    user.innerHTML = '<div class="circle" id="circle-v-'+id+'"><div class="fas" aria-hidden="true"></div></div><div class="texte">'+currentName+'</div>'
+    user.innerHTML = '<div class="circle" id="circle-v-'+id+'"><div class="fas" aria-hidden="true"></div></div><div class="texte">'+currentName+'</div><div class="notification"></div>'
 
     div.appendChild(user);
     let us = div.children;
@@ -222,16 +278,11 @@ function addUserVicinity(id, name){
         user.addEventListener("mouseover", dragOver, false);
         user.addEventListener("mouseout", dragOut, false);
 
-        user.addEventListener("touchstart", dragStart, false);
-        user.addEventListener("touchmove", drag, false);
-
-        user.addEventListener("mousedown", dragStart, false);
-        user.addEventListener("mousemove", drag, false);
     }else{
     }
 
-    user.addEventListener("touchend", dragEnd, false);
-    user.addEventListener("mouseup", dragEnd, false);
+    user.addEventListener("touchstart", dragStart, false);
+    user.addEventListener("mousedown", dragStart, false);
     user.addEventListener("contextmenu", rightClick, false);
 
     //-- zones ---
@@ -250,6 +301,7 @@ function addUserVicinity(id, name){
 
     //-- btns ---
     div = document.getElementById('list-buttons-v');
+
     //-- zone ---
     let btn = document.createElement('div');
     btn.id = 'btn-zone-v-' + id;
@@ -278,13 +330,27 @@ function addUserVicinity(id, name){
     let insidebtn = document.createElement('div');
     insidebtn.classList.add('fas');
     insidebtn.classList.add('fa-comment');
+    insidebtn.classList.add('no-pointer-evt');
     btn.appendChild(insidebtn);
-    //btn.innerHTML='<i class="fas fa-record-vinyl" aria-hidden="true"></i>';
     div.appendChild(btn);
     btn.onclick = function(e) {
+        e.preventDefault();
+        let indexid = e.target.id.substr(10,e.target.id.length);
+        userExpand(indexid,0);
+        v_DOMevts.destMsg=indexid;
 
+        div = document.getElementById('v-dest');
+        if(v_DOMevts.destMsg===serverConnection.id) {
+            div.innerHTML = "From me to everybody (public)";
+        }else{
+            div.innerHTML = "From me to "+users[v_DOMevts.destMsg].name+" (private)";
+        }
+        div = document.getElementById('grey-backgrd');
+        div.style.display="block";
 
     };
+
+
 }
 
 /**
@@ -292,6 +358,7 @@ function addUserVicinity(id, name){
  * @param {string} name
  */
 function delUserVicinity(id, name) {
+    // @TODO remove eventlisteners
     let div = document.getElementById('list-users-v');
     let user = document.getElementById('user-v-' + id);
     div.removeChild(user);
@@ -305,7 +372,6 @@ function delUserVicinity(id, name) {
     div.removeChild(user);
     user = document.getElementById('btn-msg-v-' + id);
     div.removeChild(user);
-
 }
 
 /**
@@ -320,46 +386,74 @@ function rightClick(e) {
     let btnmsg = document.getElementById('btn-msg-v-' + thisid);
 
     if(users[thisid].expanded===0) {
-        users[thisid].expanded=1;
-        target.classList.add("userv-expanded");
 
-        //-- sound zone -----------------
-        let zone = document.getElementById('zone-v-' + thisid);
-        zone.style.left=(users[thisid].x-((v_params.zone_w-50)/2))+"px";
-        zone.style.top=(users[thisid].y-((v_params.zone_w-50)/2))+"px";
-
-        // @ TODO optimize in the future. Keep like that for the prototype
-        let btnx = (users[thisid].x + 25) + (v_params.radius * Math.cos(v_params.offsetangle + v_params.angle));
-        let btny = (users[thisid].y + 12) + (v_params.radius * Math.sin(v_params.offsetangle + v_params.angle));
-        btn.style.left=btnx - (40/2)+"px";
-        btn.style.top=btny - (40/2)+"px"; //!!!!!!!!!! Attention : la bulle scalée est plus haute que large d'où le 25 et 12
-        btn.style.display="block";
-
-         btnx = (users[thisid].x + 25) + (v_params.radius * Math.cos(v_params.offsetangle + v_params.angle*2));
-         btny = (users[thisid].y + 12) + (v_params.radius * Math.sin(v_params.offsetangle + v_params.angle*2));
-        btnmsg.style.left=btnx - (40/2)+"px";
-        btnmsg.style.top=btny - (40/2)+"px";
-        btnmsg.style.display="block";
-
-
-        //-- media ----------------------
-        for(var i=0;i<users[thisid].media.length;i++){
-            if(users[thisid].media[i].expanded===0) {
-                computePositionMedia(thisid,i);
-                let peerid = "peer-"+users[thisid].media[i].id.substr(6,2);
-                let div = document.getElementById(peerid);
-                div.style.display="block";
+        // verify the distance
+        let allowRightClick = true;
+        if(thisid===serverConnection.id){
+            //OK
+        }else{
+            let distance=distancePoints(users[serverConnection.id].x, users[serverConnection.id].y, users[thisid].x, users[thisid].y);
+            if (distance < v_params.distance_m) {
+                //OK
             }else{
-                // expanded
+                if( users[thisid].bullhorn===true) {
+                    //OK
+                }else{
+                    allowRightClick=false;
+                }
             }
         }
+
+        if(allowRightClick===true) {
+            users[thisid].expanded=1;
+            target.classList.add("userv-expanded");
+
+            //-- sound zone -----------------
+            let zone = document.getElementById('zone-v-' + thisid);
+            zone.style.left=(users[thisid].x-((v_params.zone_w-50)/2))+"px";
+            zone.style.top=(users[thisid].y-((v_params.zone_w-50)/2))+"px";
+
+            // @ TODO optimize in the future. Keep like that for the prototype
+            let btnx = (users[thisid].x + 25) + (v_params.radius * Math.cos(v_params.offsetangle + v_params.angle));
+            let btny = (users[thisid].y + 12) + (v_params.radius * Math.sin(v_params.offsetangle + v_params.angle));
+            btn.style.left=btnx - (40/2)+"px";
+            btn.style.top=btny - (40/2)+"px"; //!!!!!!!!!! Attention : la bulle scalée est plus haute que large d'où le 25 et 12
+            btn.style.display="block";
+
+            btnx = (users[thisid].x + 25) + (v_params.radius * Math.cos(v_params.offsetangle + v_params.angle*2));
+            btny = (users[thisid].y + 12) + (v_params.radius * Math.sin(v_params.offsetangle + v_params.angle*2));
+            btnmsg.style.left=btnx - (40/2)+"px";
+            btnmsg.style.top=btny - (40/2)+"px";
+            btnmsg.style.display="block";
+
+
+            //-- media ----------------------
+            for(var i=0;i<users[thisid].media.length;i++){
+                if(users[thisid].media[i].expanded===0) {
+                    computePositionMedia(thisid,i);
+                    let peerid = "peer-"+users[thisid].media[i].id.substr(6,2);
+                    let div = document.getElementById(peerid);
+                    div.style.display="block";
+                }else{
+                    // expanded
+                }
+            }
+        }else{
+            // alert
+            let div = document.getElementById("grey-cartoon");
+            div.style.display="block";
+        }
+
 
     }else{
 
     }
     return false;
 }
-
+/**
+ * @param {string} thisid
+ * @param {number} i
+ */
 function computePositionMedia(thisid,i){
     let mx = (users[thisid].x + 25) + (v_params.radius * Math.cos(v_params.offsetangle + (v_params.angle*(i+3))));
     let my = (users[thisid].y + 12) + (v_params.radius * Math.sin(v_params.offsetangle + (v_params.angle*(i+3))));
@@ -370,8 +464,8 @@ function computePositionMedia(thisid,i){
     let div = document.getElementById(peerid);
     div.style.left=(mx - 25)+"px";
     div.style.top=(my - 25)+"px";
-    div.dataset.currentx=(mx - 25);
-    div.dataset.currenty=(my - 25);
+    users[thisid].media[i].currentx=(mx - 25);
+    users[thisid].media[i].currenty=(my - 25);
 }
 /**
  * @param {Object} e
@@ -402,42 +496,66 @@ function dragStart(e) {
     let target=e.target;
     let allowedToMove=false;
     let expanded=0;
+    let currentx, currenty;
+
 
     switch(target.classList[0]){
         case "user-v":
         case "peer":
+            v_DOMevts.type=target.classList[0];
+            v_DOMevts.target = target;
+
              //-- controle : is it expanded ?
             if(target.classList[0]==="user-v") {
-                expanded = users[serverConnection.id].expanded;
-                if(expanded===0){
-                    allowedToMove=true;
+                if(serverConnection.id===target.id.substr(7,target.id.length)) {
+                    // me :
+                    expanded = users[serverConnection.id].expanded;
+                    if(expanded===0){
+                        allowedToMove=true;
+                        currentx = users[serverConnection.id].currentx;
+                        currenty = users[serverConnection.id].currenty;
+                    }else{
+                        // not allowed to drag
+                    }
                 }else{
-                    // not allowed to drag
+                    // others : not allowed to drag
                 }
+
             }else{
                 expanded = users[target.dataset.userid].media[parseInt(target.dataset.index)].expanded;
                 if(expanded===0){
                     // not allowed to drag (the inverse)
                 }else{
                     allowedToMove=true;
+                    currentx = users[target.dataset.userid].media[parseInt(target.dataset.index)].currentx;
+                    currenty = users[target.dataset.userid].media[parseInt(target.dataset.index)].currenty;
                 }
             }
             //-- conclusion ---------
             if(allowedToMove===true) {
                 target.style.cursor="grabbing";
+                // @TODO clean the comments. Keep for the moment
                 if (e.type === "touchstart") {
-                    target.dataset.initialx = e.touches[0].clientX - xOffset;
-                    target.dataset.initialy = e.touches[0].clientY - yOffset;
+                    //target.dataset.initialx = e.touches[0].clientX - xOffset;
+                    //target.dataset.initialy = e.touches[0].clientY - yOffset;
+                    v_DOMevts.initialx = e.touches[0].clientX - xOffset;
+                    v_DOMevts.initialy = e.touches[0].clientX - xOffset;
                 } else {
-                    target.dataset.initialx = e.clientX - xOffset - parseInt(target.dataset.currentx);
-                    target.dataset.initialy = e.clientY - yOffset - parseInt(target.dataset.currenty);
+                    //target.dataset.initialx = e.clientX - xOffset - parseInt(target.dataset.currentx);
+                    //target.dataset.initialy = e.clientY - yOffset - parseInt(target.dataset.currenty);
+                    v_DOMevts.initialx = e.clientX - xOffset - parseInt(currentx);
+                    v_DOMevts.initialy = e.clientY - yOffset - parseInt(currenty);
                 }
-                target.dataset.active = "true";
+                v_DOMevts.currentx = parseInt(currentx);//!!!!!!!!!!!!
+                v_DOMevts.currenty = parseInt(currenty);//!!!!!!!!!!!!
+
+                v_DOMevts.active = "true";
+                //target.dataset.active = "true";
                 //-- prepare end
                 if(target.classList[0]==="user-v") {
                     let userid = serverConnection.id;//target.id.substr(7,target.id.length);
-                    users[userid].localx=parseInt(target.dataset.currentx);
-                    users[userid].localy=parseInt(target.dataset.currenty);
+                    users[userid].localx=parseInt(currentx);
+                    users[userid].localy=parseInt(currenty);
                 }else{
                 }
             }else{
@@ -445,10 +563,40 @@ function dragStart(e) {
             }
 
             break;
+        case "v-resize":
+            v_DOMevts.type=target.classList[0];
+            v_DOMevts.target = target;
+            let peerid = "peer-"+target.id.substr(12,3);
+            if (e.type === "touchstart") {
+                //target.dataset.initialx = e.touches[0].clientX - xOffset;
+                //target.dataset.initialy = e.touches[0].clientY - yOffset;
+                v_DOMevts.initialx = e.touches[0].clientX - xOffset;
+                v_DOMevts.initialy = e.touches[0].clientX - xOffset;
+            } else {
+                //target.dataset.initialx = e.clientX - xOffset - parseInt(target.dataset.currentx);
+                //target.dataset.initialy = e.clientY - yOffset - parseInt(target.dataset.currenty);
+                v_DOMevts.initialx = e.clientX - xOffset ;
+                v_DOMevts.initialy = e.clientY - yOffset ;
+            }
+            v_DOMevts.currentx =  v_DOMevts.initialx;
+            v_DOMevts.currenty =  v_DOMevts.initialy;
+            v_DOMevts.peer_media_id = target.id.substr(12,3);
+            v_DOMevts.active = "true";
         default:
             break;
     }
-
+    document.getElementById("vicinity-container").addEventListener(
+        'mousemove', drag, false,
+    );
+    document.getElementById("vicinity-container").addEventListener(
+        'touchmove', drag, false,
+    );
+    document.getElementById("vicinity-container").addEventListener(
+        'mouseup', dragEnd, false,
+    );
+    document.getElementById("vicinity-container").addEventListener(
+        'touchend', dragEnd, false,
+    );
 
 }
 /**
@@ -458,43 +606,70 @@ function drag(e) {
     let div = document.getElementById("right");
     var xOffset = div.offsetLeft;
     var yOffset = div.offsetTop;
+    let target=v_DOMevts.target;
 
-    let target=e.target;
-
-    if (target.dataset.active==="true") {
-
-        e.preventDefault();
+    e.preventDefault();
+    if (v_DOMevts.active==="true") {
 
         if (e.type === "touchmove") {
-            target.dataset.currentx = e.touches[0].clientX - xOffset - parseInt(target.dataset.initialx);
-            target.dataset.currenty = e.touches[0].clientY - yOffset - parseInt(target.dataset.initialy);
+            v_DOMevts.currentx = e.touches[0].clientX - xOffset - parseInt(v_DOMevts.initialx);
+            v_DOMevts.currenty = e.touches[0].clientY - yOffset - parseInt(v_DOMevts.initialy);
         } else {
-            target.dataset.currentx = e.clientX - xOffset - parseInt(target.dataset.initialx);
-            target.dataset.currenty = e.clientY - yOffset - parseInt(target.dataset.initialy);
+            v_DOMevts.currentx = e.clientX - xOffset - parseInt(v_DOMevts.initialx);
+            v_DOMevts.currenty = e.clientY - yOffset - parseInt(v_DOMevts.initialy);
         }
 
-        setTranslate(target.dataset.currentx, target.dataset.currenty, target);
+        switch(v_DOMevts.type) {
+            case "user-v":
+            case "peer":
+                if(v_DOMevts.currentx<0) {
+                    v_DOMevts.currentx=0;
+                }else{
+                }
 
-        let data = {x:parseInt(target.dataset.currentx), y:parseInt(target.dataset.currenty)};
-        if(target.classList[0]==="user-v") {
-            users[serverConnection.id].x=data.x;
-            users[serverConnection.id].y=data.y;
-            computeVolume();
-            computeEye();
-            serverConnection.userMessage("setPos", null, data, true);
+                setTranslate(v_DOMevts.currentx, v_DOMevts.currenty, target);
 
-            //-- sound zone -----------------
-            let zone = document.getElementById('zone-v-' + serverConnection.id);
-            zone.style.left=(users[serverConnection.id].x-((v_params.zone_w-50)/2))+"px";
-            zone.style.top=(users[serverConnection.id].y-((v_params.zone_w-50)/2))+"px";
+                let data = {x:parseInt(v_DOMevts.currentx), y:parseInt(v_DOMevts.currenty)};
+                if(v_DOMevts.type==="user-v") {
+                    users[serverConnection.id].x=data.x;
+                    users[serverConnection.id].y=data.y;
+                    computeVolume();
+                    computeEye();
+                    serverConnection.userMessage("setPos", null, data, true);
 
-        }else{
-            users[target.dataset.userid].media[parseInt(target.dataset.index)].x=data.x;
-            users[target.dataset.userid].media[parseInt(target.dataset.index)].y=data.y;
-            // @TODO delete this case in usermedia message
-            // data.cid=users[serverConnection.id].media[target.dataset.index].cid;
-            // serverConnection.userMessage("setPosMedia", null, data, true);
+                    //-- sound zone -----------------
+                    let zone = document.getElementById('zone-v-' + serverConnection.id);
+                    zone.style.left=(users[serverConnection.id].x-((v_params.zone_w-50)/2))+"px";
+                    zone.style.top=(users[serverConnection.id].y-((v_params.zone_w-50)/2))+"px";
+
+                }else{
+                    users[target.dataset.userid].media[parseInt(target.dataset.index)].x=data.x;
+                    users[target.dataset.userid].media[parseInt(target.dataset.index)].y=data.y;
+                    // @TODO delete this case in usermedia message
+                    // data.cid=users[serverConnection.id].media[target.dataset.index].cid;
+                    // serverConnection.userMessage("setPosMedia", null, data, true);
+                }
+                break;
+
+            case "v-resize":
+
+                let peerdiv = document.getElementById("peer-"+v_DOMevts.peer_media_id);
+                let width = users[peerdiv.dataset.userid].media[parseInt(peerdiv.dataset.index)].width;
+                let heigth = users[peerdiv.dataset.userid].media[parseInt(peerdiv.dataset.index)].height;
+
+
+                let newWidth = width + v_DOMevts.currentx;
+                let newHeight = heigth + v_DOMevts.currenty;
+                peerdiv.style.width=newWidth+"px";
+                peerdiv.style.height=newHeight+"px";
+
+                let mediadiv = document.getElementById("media-"+v_DOMevts.peer_media_id);
+                mediadiv.style.width=newWidth+"px";
+                mediadiv.style.height=newHeight+"px";
+
+                break;
         }
+
     }else{
     }
 }
@@ -502,20 +677,21 @@ function drag(e) {
  * @param {Object} e
  */
 function dragEnd(e) {
-    let target=e.target;
-    if (target.dataset.active==="true") {
-        switch(target.classList[0]) {
+    let target=v_DOMevts.target;
+
+    if (v_DOMevts.active==="true") {
+        switch(v_DOMevts.type) {
             case "user-v":
             case "peer":
                 target.style.cursor="grab";
-                target.dataset.active = "false";
+                v_DOMevts.active = "false";
 
                 //-- position by default -----------
-                let newPos = {x:target.dataset.currentx, y:target.dataset.currenty}
+                let newPos = {x:v_DOMevts.currentx, y:v_DOMevts.currenty}
                 let data = {x:parseInt(newPos.x), y:parseInt(newPos.y)}
                 //-- user case :
-                if(target.classList[0]==="user-v") {
-                     newPos=computePosition(target.dataset.currentx, target.dataset.currenty);
+                if(v_DOMevts.type==="user-v") {
+                     newPos=computePosition(v_DOMevts.currentx, v_DOMevts.currenty);
                      data = {x:parseInt(newPos.x-v_params.offset_dragendx), y:parseInt(newPos.y-v_params.offset_dragendy)}
                     //-- sound zone -----------------
                     let zone = document.getElementById('zone-v-' + serverConnection.id);
@@ -539,14 +715,17 @@ function dragEnd(e) {
 
                 // memorisation position
                 // @TODO : solve pb on tablet
-                target.dataset.currentx=data.x;
-                target.dataset.currenty=data.y;
-                target.style.left=target.dataset.currentx+"px";
-                target.style.top=target.dataset.currenty+"px";
+                v_DOMevts.currentx = data.x;
+                v_DOMevts.currenty = data.y;
+                target.style.left=v_DOMevts.currentx+"px";
+                target.style.top=v_DOMevts.currenty+"px";
 
-                if(target.classList[0]==="user-v") {
+                // @TODO verify if x=currentx and y=currenty and eliminate currentx and currenty
+                if(v_DOMevts.type==="user-v") {
                     users[serverConnection.id].x=data.x;
                     users[serverConnection.id].y=data.y;
+                    users[serverConnection.id].currentx=data.x;
+                    users[serverConnection.id].currenty=data.y;
                     computeVolume();
                     computeEye();
                     serverConnection.userMessage("setPos", null, data, true);
@@ -554,10 +733,20 @@ function dragEnd(e) {
                 }else{
                     users[target.dataset.userid].media[parseInt(target.dataset.index)].x=data.x;
                     users[target.dataset.userid].media[parseInt(target.dataset.index)].y=data.y;
+                    users[target.dataset.userid].media[parseInt(target.dataset.index)].currentx=data.x;
+                    users[target.dataset.userid].media[parseInt(target.dataset.index)].currenty=data.y;
                     // @TODO delete this case in usermedia message
                     //data.cid=users[serverConnection.id].media[target.dataset.index].cid;
                     //serverConnection.userMessage("setPosMedia", null, data, true);
                 }
+                break;
+
+            case "v-resize":
+
+                let peerdiv = document.getElementById("peer-"+v_DOMevts.peer_media_id);
+                users[peerdiv.dataset.userid].media[parseInt(peerdiv.dataset.index)].width=parseInt(peerdiv.style.width);
+                users[peerdiv.dataset.userid].media[parseInt(peerdiv.dataset.index)].height=parseInt(peerdiv.style.height);
+
                 break;
             default:
                 break;
@@ -565,51 +754,124 @@ function dragEnd(e) {
 
     }else{
         // not drag
-        if(target.classList[0]==="peer") {
+        switch(v_DOMevts.type) {
+            case "user-v":
+                // click on user that is already expanded
+                //let thisid=e.target.id.substr(7,e.target.id.length);//!!!!!!!!!!!!!!!
+                let thisid=target.id.substr(7,target.id.length);
 
-            target.classList.remove('v-peer');
-            // screenshare :
-            target.classList.add('v-peer-expand');
-            users[target.dataset.userid].media[parseInt(target.dataset.index)].expanded=1;
-            let div = document.getElementById("close-"+target.id);
-            div.style.display="block";
+                if (users[thisid].expanded==1) {
+                    // @TODO : put u=in a function :
+                    users[thisid].expanded=0;
+                    let btn = document.getElementById('btn-zone-v-' + thisid);
+                    let btnmsg = document.getElementById('btn-msg-v-' + thisid);
+                    target.classList.remove("userv-expanded");
+                    btn.style.display="none";
+                    btnmsg.style.display="none";
 
-            if(users[target.dataset.userid].media[parseInt(target.dataset.index)].types.indexOf("screenshare") > -1) {
-               // div.classList.add('front-over');
-                //div = document.getElementById('grey-backgrd');
-                //div.style.display="block";
-            }else{
+                    for(var i=0;i<users[thisid].media.length;i++){
+                        if(users[thisid].media[i].expanded===0) {
+                            let peerid = "peer-"+users[thisid].media[i].id.substr(6,2);
+                            let div = document.getElementById(peerid);
+                            div.style.display="none";
+                        }else{
+                            // expanded
+                        }
 
-            }
+                    }
+                }else{
+                    // already 0
+                }
+                break;
+            case "peer":
+                target.classList.remove('v-peer');
+                // screenshare :
+                target.classList.add('v-peer-expand');
+                //console.log(target.dataset.userid+" / "+target.dataset.index)
+                users[target.dataset.userid].media[parseInt(target.dataset.index)].expanded=1;
+                //console.log(users[target.dataset.userid].media)
 
-        }else{
-            // click on user that is already expanded
-            let thisid=e.target.id.substr(7,e.target.id.length);
+                let div = document.getElementById("close-"+target.id);
+                div.style.display="block";
+                div = document.getElementById("resize-"+target.id);
+                div.style.display="block";
 
-            if (users[thisid].expanded==1) {
-                users[thisid].expanded=0;
-                let btn = document.getElementById('btn-zone-v-' + thisid);
-                let btnmsg = document.getElementById('btn-msg-v-' + thisid);
-                target.classList.remove("userv-expanded");
+                // resize
+                let peerdiv = document.getElementById("peer-"+target.id.substr(5,3));
+                let newWidth = 240;
+                let newHeight = 180;
+                peerdiv.style.width=newWidth+"px";
+                peerdiv.style.height=newHeight+"px";
+
+                let mediadiv = document.getElementById("media-"+target.id.substr(5,3));
+                mediadiv.style.width=newWidth+"px";
+                mediadiv.style.height=newHeight+"px";
+
+                // user off --------
+                let userid=target.dataset.userid;
+                users[userid].expanded=0;
+                let btn = document.getElementById('btn-zone-v-' + userid);
+                let btnmsg = document.getElementById('btn-msg-v-' + userid);
+                let userv = document.getElementById('user-v-' + userid);
+                userv.classList.remove("userv-expanded");
                 btn.style.display="none";
                 btnmsg.style.display="none";
 
-                for(var i=0;i<users[thisid].media.length;i++){
-                    if(users[thisid].media[i].expanded===0) {
-                        let peerid = "peer-"+users[thisid].media[i].id.substr(6,2);
-                        let div = document.getElementById(peerid);
-                        div.style.display="none";
+                for(var i=0;i<users[userid].media.length;i++){
+                    if(users[userid].media[i].expanded===0) {
+                        let peerid = "peer-"+users[userid].media[i].id.substr(6,2);
+                        let divpeer = document.getElementById(peerid);
+                        divpeer.style.display="none";
                     }else{
                         // expanded
                     }
 
                 }
-            }else{
-                // already 0
-            }
 
-
+                break;
         }
+
+    }
+
+    document.getElementById("vicinity-container").removeEventListener(
+        'mousemove', drag, false,
+    );
+    document.getElementById("vicinity-container").removeEventListener(
+        'touchmove', drag, false,
+    );
+    document.getElementById("vicinity-container").removeEventListener(
+        'mouseup', dragEnd, false,
+    );
+    document.getElementById("vicinity-container").removeEventListener(
+        'touchend', dragEnd, false,
+    );
+}
+/**
+ * @param {number} userid
+ * @param {number} state
+ */
+function userExpand(userid,state){
+    users[userid].expanded=state;
+    let btn = document.getElementById('btn-zone-v-' + userid);
+    let btnmsg = document.getElementById('btn-msg-v-' + userid);
+    let userv = document.getElementById('user-v-' + userid);
+
+    if (state===0) {
+        userv.classList.remove("userv-expanded");
+        btn.style.display="none";
+        btnmsg.style.display="none";
+
+        for(var i=0;i<users[userid].media.length;i++){
+            if(users[userid].media[i].expanded===0) {
+                let peerid = "peer-"+users[userid].media[i].id.substr(6,2);
+                let divpeer = document.getElementById(peerid);
+                divpeer.style.display="none";
+            }else{
+                // expanded
+            }
+        }
+    }else{
+        // @TODO case 1
     }
 
 
@@ -674,6 +936,7 @@ function computeVolume(){
                 // all is high
             }else{
                 let distance=distancePoints(users[serverConnection.id].x, users[serverConnection.id].y, users[key].x, users[key].y);
+                distance = Math.max(0,distance-90);
 
                 //@TODO use the conditions in order to calibrate the sound
                 /*
@@ -687,6 +950,7 @@ function computeVolume(){
                     }
 
                 }*/
+                //@TODO remove unused methods
                 switch(v_params.type_gain){
                     case "linear":
                         volume =v_params.linear_a*distance + v_params.linear_b;
@@ -698,8 +962,6 @@ function computeVolume(){
                         volume = Math.pow(distance,-v_params.gain_a);
                         break;
                 }
-
-
 
                 volume = Math.max(0,volume);
                 volume = Math.min(1,volume);
@@ -778,32 +1040,157 @@ document.getElementById('bullhornbutton').onclick = function(e) {
 
 };
 
-/** closemediav Button */
-document.getElementById('closemediav').onclick = function(e) {
+/** grey-backgrd */
+document.getElementById('grey-backgrd').onclick = function(e) {
     e.preventDefault();
-    let arrayDiv=document.getElementsByClassName('front-over');
-    for(var i=0;i<arrayDiv.length;i++){
-        // normaly : only one
-        div = arrayDiv[i];
-        div.classList.remove('front-over');
-        div.classList.add('v-peer');
-
-        div.style.left=div.dataset.currentx+"px";
-        div.style.top=div.dataset.currenty+"px";
-
-
+    if(e.target.id.substr(0,2)==="v-") {
+        // input and button
+    }else{
+        div = document.getElementById('grey-backgrd');
+        div.style.display="none";
     }
+
+
+};
+/** grey-cartoon */
+document.getElementById('grey-cartoon').onclick = function(e) {
+    e.preventDefault();
+    div = document.getElementById('grey-cartoon');
+    div.style.display="none";
+
+
+};
+// @TODO keep only one function handelInput
+function handleInputVicinity() {
+    let input = /** @type {HTMLTextAreaElement} */
+        (document.getElementById('v-input'));
+    let data = input.value;
+    input.value = '';
+
+    let message, me;
+
+    if(data === '')
+        return;
+
+    if(data[0] === '/') {
+        if(data.length > 1 && data[1] === '/') {
+            message = data.slice(1);
+            me = false;
+        } else {
+            let cmd, rest;
+            let space = data.indexOf(' ');
+            if(space < 0) {
+                cmd = data.slice(1);
+                rest = '';
+            } else {
+                cmd = data.slice(1, space);
+                rest = data.slice(space + 1);
+            }
+
+            if(cmd === 'me') {
+                message = rest;
+                me = true;
+            } else {
+                let c = commands[cmd];
+                if(!c) {
+                    displayError(`Uknown command /${cmd}, type /help for help`);
+                    return;
+                }
+                if(c.predicate) {
+                    let s = c.predicate();
+                    if(s) {
+                        displayError(s);
+                        return;
+                    }
+                }
+                try {
+                    c.f(cmd, rest);
+                } catch(e) {
+                    displayError(e);
+                }
+                return;
+            }
+        }
+    } else {
+        message = data;
+        me = false;
+    }
+
+    if(!serverConnection || !serverConnection.socket) {
+        displayError("Not connected.");
+        return;
+    }
+
+    try {
+        if(v_DOMevts.destMsg===serverConnection.id) {
+            serverConnection.chat(me ? 'me' : '', '', message);
+        }else{
+            serverConnection.chat(me ? 'me' : '', v_DOMevts.destMsg, message);
+        }
+
+    } catch(e) {
+        console.error(e);
+        displayError(e);
+    }
+
     div = document.getElementById('grey-backgrd');
     div.style.display="none";
 
+
+}
+/**
+ * @param {number} userid
+ */
+function showNotification(userid){
+
+    if(userid===serverConnection.id) {
+        // don't show
+    }else{
+        let div=document.getElementById('user-v-'+userid);
+        let arrayDiv=div.getElementsByClassName('notification');
+        if(typeof arrayDiv === 'undefined'){
+        }else{
+            if(arrayDiv.length>0) {
+                arrayDiv[0].style.display="block";
+                clearTimeout(users[userid].tnotification);
+                users[userid].tnotification = setTimeout(resetNotification,v_params.delay_notification,userid);
+            }else{
+            }
+        }
+    }
+
+}
+/**
+ * @param {number} userid
+ */
+function resetNotification(userid){
+    div=document.getElementById('user-v-'+userid);
+    let arrayDiv=div.getElementsByClassName('notification');
+    arrayDiv[0].style.display="none";
+
+}
+document.getElementById('v-inputform').onsubmit = function(e) {
+    e.preventDefault();
+    handleInputVicinity();
+};
+document.getElementById('v-inputbutton').onmouseup = function(e) {
+    e.preventDefault();
+    handleInputVicinity();
 };
 
+document.getElementById('v-input').onkeypress = function(e) {
+    if(e.key === 'Enter' && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
+        e.preventDefault();
+        handleInputVicinity();
+    }
+};
 
 
 /** Vicinity Initialisation */
 function vicinityStart() {
     updateSetting("vicinity", "off");
 
+    //@TODO remove unused methods
     // parameters
     let linear_a = (1.0 - 0.0)/(55.0 - 180.0);
     let linear_b = 1.0 - 55.0*linear_a;
@@ -817,18 +1204,19 @@ function vicinityStart() {
 
         linear_a:linear_a,
         linear_b:linear_b,
-        gain_a:0,
-        type_gain:"linear", // or "1/d^2" or "quadratic"
+        gain_a:30,
+        type_gain:"1/d^2", // or "1/d^2" or "quadratic"
         offset_y:110,
         offset_dragendx:-5,
         offset_dragendy:25,
-        distance_m:180,
+        distance_m:380,
         distance_confortmin:100,
         distance_confortmax:500,
         zone_w:250,
         angle:Math.PI/6,
         offsetangle:-Math.PI/2,
-        radius:80
+        radius:80,
+        delay_notification:8000
     };
     // color interface
 
@@ -861,11 +1249,14 @@ function vicinityStart() {
     document.getElementById('btn-color'+0).style.borderWidth='6px';
     getInputElement('usercolor').value=0;
 
+    //-- DOM drag and drop
+    v_DOMevts={};
+
 }
 vicinityStart();
 
 //-- @TODO remove after tests ------------------------
-document.addEventListener("keydown", keyDownHandler, false);
+//document.addEventListener("keydown", keyDownHandler, false);
 
 function keyDownHandler(e) {
     var keyOn = e.key;
@@ -878,12 +1269,12 @@ function keyDownHandler(e) {
         case "2":
             //v_params.type_gain="1/d^2";
             //v_params.gain_a = -0.9;
-            serverConnection.chat('', '', "1/d^2 et a= -0.9");
+            serverConnection.chat('', '', "1/d^2 et a= 20");
             serverConnection.userMessage("gainMethod2", null, '', false);
             break;
         case "3":
             //v_params.type_gain="1/d^2";
-            //v_params.gain_a = 30;
+            //v_params.gain_a = 30; 
             serverConnection.chat('', '', "1/d^2 et a=30");
             serverConnection.userMessage("gainMethod3", null, '', false);
             break;

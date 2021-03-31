@@ -453,6 +453,7 @@ function setButtonsVisibility() {
     setVisibility('mediaoptions', permissions.present);
     setVisibility('sendform', permissions.present);
     setVisibility('fileform', canFile && permissions.present);
+    setVisibility('standardbutton', permissions.op);
     setVisibility('vicinitybutton', permissions.op);
 
     let currentVicinity = getSettings().vicinity;
@@ -1744,7 +1745,7 @@ function addUser(id, name) {
     if(id in users)
         throw new Error('Duplicate user id');
     // @TODO give the explaination of all the params
-    users[id] = {"name":name,"color":"#20b91e","x":v_params.ori_x,"y":v_params.ori_y, "media":[],"bullhorn":false,"localx":0,"localy":0,"expanded":0};
+    users[id] = {"name":name,"color":"#20b91e","x":v_params.ori_x,"y":v_params.ori_y, "media":[],"bullhorn":false,"localx":0,"localy":0,"expanded":0,"tnotification":0};
 
     let div = document.getElementById('users');
     let user = document.createElement('div');
@@ -1957,10 +1958,14 @@ function gotUserMessage(id, dest, username, time, privileged, kind, message) {
          let ydef=parseInt(message.y);
 
          if(id===serverConnection.id) {
-             userv.dataset.currentx=message.x;
+             users[serverConnection.id].currentx=message.x;
+             users[serverConnection.id].currenty=message.y;
+             users[serverConnection.id].initialx=message.x;
+             users[serverConnection.id].initialy=message.y;
+             /*userv.dataset.currentx=message.x;
              userv.dataset.currenty=message.y;
              userv.dataset.initialx=message.x;
-             userv.dataset.initialy=message.y;
+             userv.dataset.initialy=message.y;*/
           }else{
              if (message.x<v_params.hall_x) {
                  xdef=v_params.out_x;
@@ -2013,7 +2018,7 @@ function gotUserMessage(id, dest, username, time, privileged, kind, message) {
             break
         case 'gainMethod2':
             v_params.type_gain="1/d^2";
-            v_params.gain_a = -0.9;
+            v_params.gain_a = 20;
             computeVolume();
             break
         case 'gainMethod3':
@@ -2232,6 +2237,13 @@ function addToChatbox(peerId, dest, nick, time, privileged, kind, message) {
         lastMessage.peerId = peerId;
         lastMessage.dest = (dest || null);
         lastMessage.time = (time || null);
+
+        if(typeof peerId === 'undefined'){
+            // for instance when launching the page
+        }else{
+            showNotification(peerId)
+        }
+
     } else {
         let asterisk = document.createElement('span');
         asterisk.textContent = '*';
